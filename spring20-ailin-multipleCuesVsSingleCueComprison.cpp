@@ -164,7 +164,7 @@ double thmZNow = 0;
 // visual origin is the center of the visual stimulus (the mid point on the surface), 
 // it should be set at a point that can get the edge of the elleptical surface to line up with the haptic stumulus edge
 double display_distance = -380;
-double lastVisualOriginX = 100, lastVisualOriginY = 0.0, lastVisualOriginZ = display_distance;
+double lastVisualOriginX = 0, lastVisualOriginY = 0.0, lastVisualOriginZ = display_distance;
 double visualOriginX = lastVisualOriginX, visualOriginY = 0.0, visualOriginZ = display_distance; // holders for the current target
 double visual_angle = 6; // stim diangonal size
 double min_depth = 22; // set in the subject file
@@ -214,6 +214,7 @@ GLuint* texture[51];
 //GLfloat *vertices = new GLfloat[1];
 GLfloat vertices[10000000];
 GLfloat vertices_projected[10000000];
+GLfloat normals[10000000];
 GLuint indices[10000000];
 GLfloat texcoors[10000000];
 int vertex_index, tex_index = 0; int iFace; int nr_triangles; int nr_vertices;
@@ -419,7 +420,7 @@ string intermixedFile_headers = "subjName\tblockN\tbin\ttrialN\tattemptN\tdepth\
 string subjectName;
 
 /********* FILE STREAMS AND PARAMETERS**************************/
-ofstream trialFile;
+//ofstream trialFile;
 ParametersLoader parameters;
 BalanceFactor<double> trial;
 
@@ -760,7 +761,6 @@ double calculateDepth(double depth, double y){
 	return (z);
 }
 
-
 void buildCylinder(double textureDepth, double dispDepth) {
 
 	edge = tan((DEG2RAD * visual_angle) / 2) * 2 * (abs(display_distance) + depth);
@@ -802,12 +802,21 @@ void buildCylinder(double textureDepth, double dispDepth) {
 			// also do color in the same iteration to be more efficient with only one index counter
 			// also populate the vertices array for the 2D sine wave. Remember, x is the 3D z dimensionm, y is y
 
+			// we also calculate the normal for each vertex for shading
+			// the normal of the ellipse is the point on the axis (x, 0, 0) to (x, y, z),
+			// which is (0, y, z) before normalization
 			vertices[vertex_index] = x;  // this is x
-			colors[vertex_index] = 1; vertex_index++;  //R is this value
+			colors[vertex_index] = 1;    //R is this value
+			normals[vertex_index] = 0; // this is x
+			vertex_index++;
 			vertices[vertex_index] = y; // this is y
-			colors[vertex_index] = 0; vertex_index++; // G is this value
-			vertices[vertex_index] = z; //z. 
-			colors[vertex_index] = 0; vertex_index++; // B is this value
+			colors[vertex_index] = 0;  // G is this value
+			normals[vertex_index] = y; // this is y
+			vertex_index++;
+			vertices[vertex_index] = z; // this is z
+			colors[vertex_index] = 0; // B is this value
+			normals[vertex_index] = z; // this is z
+			vertex_index++;
 
 			texcoors[tex_index] = (x + edge / 2) / normalizer; tex_index++;//u coordinate
 			texcoors[tex_index] = total_distance / normalizer; tex_index++;//v coordinate
@@ -887,6 +896,17 @@ void drawAperture() {
 }
 
 void drawCylinder() {
+	GLfloat light_ambient[] = {0.f, 0.f, 0.f, 1.f};
+	GLfloat light_diffuse[] = {1.f, 1.f, 1.f, 1.f};
+	GLfloat light_dir[] = {0.0, 0.0, 1.f, 0.f};
+	GLfloat cylinder_color[] = {1.f, 0.f, 0.f, 1.f};
+	glLightfv(GL_LIGHT1, GL_AMBIENT, light_ambient);
+	glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse);
+	glLightfv(GL_LIGHT1, GL_POSITION, light_dir);
+	glEnable(GL_LIGHT1);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_NORMALIZE);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, cylinder_color);
 
 	// define our transformation matrix to push back in depth, and do it
 	glLoadIdentity();
@@ -905,7 +925,7 @@ void drawCylinder() {
 	glEnable(GL_POLYGON_SMOOTH);
 	glEnable(GL_BLEND);
 	glEnable(GL_TEXTURE_2D);
-	glColor3f(1.0f, 0.0f, 0.0f);
+	// glColor3f(1.0f, 0.0f, 0.0f);
 
 	// bind the texture
 	if (texture_type == 0) {
@@ -926,13 +946,16 @@ void drawCylinder() {
 
 	// activate and specify pointer to vertex array
 	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_NORMAL_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
 	if (text_disp_conflict) {
 		glVertexPointer(3, GL_FLOAT, 0, vertices_projected);
+		glNormalPointer(GL_FLOAT, 0, normals);
 	}
 	else {
 		glVertexPointer(3, GL_FLOAT, 0, vertices);
+		glNormalPointer(GL_FLOAT, 0, normals);
 	}
 
 	glTexCoordPointer(2, GL_FLOAT, 0, texcoors);
@@ -942,6 +965,7 @@ void drawCylinder() {
 
 	// deactivate vertex arrays after drawing
 	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_NORMAL_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 
 }
@@ -954,9 +978,6 @@ void initTrial() {
 	// set variables
 	// set carousel
 	//trialInitialized = false;
-
-	string trialFileName;
-	trialFileName = experiment_directory + subjectName + "/" + subjectName + "_blk" + stringify<int>(blockNum) + "_trial" + stringify<int>(trialNum) + "_a" + stringify<int>(attemptNum) + ".txt";
 	
 	//texture_type = 3; // texture type from the subject parameters file
 		bin = ceil( double(trialNum) / double(num_depth) );
@@ -981,11 +1002,6 @@ void initTrial() {
 
 	target_ind_Z = visualOriginZ - depth;
 
-	trialFile.open(trialFileName.c_str());
-
-	trialFile << fixed << intermixedFile_headers << endl;
-
-
 	frameNum = 0;
 	startTime = 0;
 	endTime = 0;
@@ -1007,7 +1023,7 @@ void initTrial() {
 	//get the position of the backSurface
 	trial_timer.reset();
 	trial_timer.stop();
-	currentState = waitForHand;
+	currentState = drawVisual;
 
 }
 
@@ -1043,24 +1059,16 @@ void drawStimulus(Stages stage)//drawing fingers and stiumulus
 {//Stages {calibrationStage, preparingTrial, waitForHand, respond, feedback, breaktime, expFinished };
 
 	//stepperRotate(depth);
-	
-	if (!allVisibleIndex)
-		drawX();
-	if (!allVisibleThumb)
-		drawT();
+
 
 	switch (stage) {
 		//case waitForHand:
-	case respond:
+
 	case drawVisual:
-			drawThumb();
 			drawCylinder();
-			drawAperture();
+			//drawAperture();
 		break;
-	case feedback:
-		if (percentComplete % 10 == 0 && percentComplete < 100 && percentComplete > 0)
-		 drawProgressBar();
-		break;
+
 
 	}
 
@@ -1203,14 +1211,8 @@ void handleKeypress(unsigned char key, int x, int y)
 	case 'a':
 	case 'A':
 		{  
-			if (currentState == breaktime){
-		currentState = preparingTrial;
-		//
-		//trialNum = 1;
-		//attemptNum = 1;
-		//inBreak = false;
+		trial.next();
 		initTrial();
-			}
 		}
 		break;
 
@@ -1248,10 +1250,10 @@ void handleKeypress(unsigned char key, int x, int y)
 		{
 
 			stepper_rotate(rotTable, 0, 238.67);
-			homeEverything(5000, 4500);
+			//homeEverything(5000, 4500);
 			stepper_close(rotTable);
 
-			homeEverything(5000, 4500);
+			//homeEverything(5000, 4500);
 
 			cleanup();
 			exit(0);
@@ -1261,73 +1263,26 @@ void handleKeypress(unsigned char key, int x, int y)
 
 	case 'f':
 	case 'F':
-		{//&& allVisibleFingers&& allVisibleCalibration&& allVisibleCalibration
-
-			if ( fingerCalibrationDone==0 ){
-				fingerCalibrationDone++; // fingerCalibrationDone starts at 0, this increments to 1, then 2
-				calibration_fingers(fingerCalibrationDone);
+	
 				beepOk(0);
-
-				break;
-			}
-
-			if ( fingerCalibrationDone==1 && allVisibleFingers)
-			{
-				fingerCalibrationDone++; // fingerCalibrationDone starts at 0, this increments to 1, then 2
-				calibration_fingers(fingerCalibrationDone);
-				beepOk(0);
-				break;
-			}
-
-			if ( fingerCalibrationDone==2 && isVisible(markers[centercalMarker].p) )
-			{
-				fingerCalibrationDone=3;
-				// set centercal
-				centercal[0] = markers[centercalMarker].p.x();
-				centercal[1] = markers[centercalMarker].p.y();
-				centercal[2] = markers[centercalMarker].p.z();
-
 				fingersCalibrated = true;
-
 				checkInfo = false;
-				beepOk(0);
-
-				//stepper_rotate(rotTable, 0, 238.67);
-
-				//Vector3d moveToFar(targetMarkerX_fix, -130, -500); // ~=53
-				moveTo[2] = display_distance - targetMarker_origin_offsetZ;
-				moveTo[0] = markers[centercalMarker].p.x();
-				moveObjectAbsolute(moveTo, centercal, 6200);
-				break;
-			}
-
-			if( fingerCalibrationDone==3 && allVisibleFingers){
-
 				fingerCalibrationDone=4;
-
-				visualOriginX = centercal[0] + targetMarker_origin_offsetX;
-				
-
-				// set start posn
-				startPosX = (ind.x()+thm.x())/2;
-				startPosY = (ind.y()+thm.y())/2;
-				startPosZ = (ind.z()+thm.z())/2;
-				beepOk(0);
 				visibleInfo = false;
 				
 			
 				blockNum = 0;
 				trialNum = 0;
 				attemptNum = 1;
-				training = true;
+				training = false;
 				//initTrainingDone = false;
-				currentTrial = train_session;
+				currentTrial = trial_grasp;
 				currentState = preparingTrial;
 
 				initTrial();
 
-			}
-		}
+			
+		
 		break;
 
 	}
@@ -1401,36 +1356,7 @@ void update(int value)
 
 void closingTrialFile()
 {
-		trialFile <<
-			subjectName << "\t" <<
-			blockNum << "\t" <<
-			bin << "\t" <<
-			trialNum << "\t" <<
-			attemptNum << "\t" <<
-			depth << "\t" <<
-			texture_type << "\t" <<
-			texnum << "\t" <<
-			frameNum << "\t" <<
-			trial_timer.getElapsedTimeInMilliSec() << "\t" <<
-			startTime << "\t" <<
-			drawTime << "\t" <<
-			touchTime << "\t" <<
-			endTime << "\t" <<
-			fingersOccluded << "\t" <<
-			distanceGripCenterToHome << "\t" <<
-			distanceGripCenterToObject << "\t" <<
-			ind.transpose() << "\t" <<
-			thm.transpose() << "\t" <<
-			y_dist_thm << "\t" <<
-			z_dist_thm << "\t" <<
-			z_dist_ind << "\t" <<
-			failCause << "\t" <<
-			grip_aperture << "\t" <<
-			vel_gripAp << "\t" <<
-			vel_gripCntrToObj << "\t" <<
-			framesOccluded << endl;
 
-	trialFile.close();
 }
 
 /*
@@ -1445,38 +1371,6 @@ void idle()
 	eyeRight = Vector3d(interoculardistance / 2, 0, 0);//0
 	eyeLeft = Vector3d(-interoculardistance / 2, 0, 0);//0
 
-	if (currentState == respond)
-	{
-
-		trialFile <<
-			subjectName << "\t" <<
-			blockNum << "\t" <<
-			bin << "\t" <<
-			trialNum << "\t" <<
-			attemptNum << "\t" <<
-			depth << "\t" <<
-			texture_type << "\t" <<
-			texnum << "\t" <<
-			frameNum << "\t" <<
-			trial_timer.getElapsedTimeInMilliSec() << "\t" <<
-			startTime << "\t" <<
-			drawTime << "\t" <<
-			touchTime << "\t" <<
-			endTime << "\t" <<
-			fingersOccluded << "\t" <<
-			distanceGripCenterToHome << "\t" <<
-			distanceGripCenterToObject << "\t" <<
-			ind.transpose() << "\t" <<
-			thm.transpose() << "\t" <<
-			y_dist_thm << "\t" <<
-			z_dist_thm << "\t" <<
-			z_dist_ind << "\t" <<
-			failCause << "\t" <<
-			grip_aperture << "\t" <<
-			vel_gripAp << "\t" <<
-			vel_gripCntrToObj << "\t" <<
-			framesOccluded << endl;
-	}
 
 }
 
@@ -1643,19 +1537,7 @@ void online_trial() {
 
 	case waitForHand:
 		frameNum++;
-		if (handAtHome && grip_aperture < 40 && holdStillCountAtHome < 30)
-			holdStillCountAtHome++;
-
-		if (holdStillCountAtHome == 30) {
-			//holdStillCountAtHome = 41;
-			//if(handFarObject && allVisibleIndex){
-			stepper_rotate(rotTable, target_angle, 238.67);
-			//}
-			trial_timer.reset();
-			trial_timer.start();
-			drawTime = trial_timer.getElapsedTimeInMilliSec();
-			currentState = drawVisual;
-		}
+		currentState = drawVisual;
 
 		break;
 
@@ -1671,72 +1553,6 @@ void online_trial() {
 		}
 		break;
 
-	case respond:
-		frameNum++;
-		if (!allVisibleFingers && movementStarted)
-			framesOccluded++;
-
-		// judge whether the movement started
-		if (!movementStarted && ((vel_gripCntrToHome > 3 && handNearHome) || !handNearHome)) {
-			movementStarted = true;
-
-			beepOk(30);
-			startTime = trial_timer.getElapsedTimeInMilliSec();
-			startFrame = frameNum;
-		}
-
-		// judge whether hand touched the object
-		if (handTouchingObject && !touchedObject) {
-			touchTime = trial_timer.getElapsedTimeInMilliSec();
-			touchedObject = true;
-		}
-
-		// judge whether response completed and determine the feedbacck
-
-		if (!responseCompleted && vel_gripCntrToObj < 0.25 && vel_gripAp < 0.15 && holdStillCount < 10 	&& handFarHome)
-			holdStillCount++;
-		// at movement completion// close the file
-		// enum TrialFeedback { success, occluded, missed, tooslow };
-		if (holdStillCount == 10)
-		{
-			responseCompleted = true;
-			endFrame = frameNum;
-			endTime = trial_timer.getElapsedTimeInMilliSec();
-			closingTrialFile();
-			percentComplete = 100 * ((trialNum) / totalTrial);
-
-
-			if ((framesOccluded > 0.25 * (endFrame - startFrame)) || !movementStarted) {
-				beepOk(15);
-				failCause = occluded;
-			}
-			else if (!handNearObject) {
-				beepOk(4); //"missed"
-				failCause = missed;
-			}
-
-			else if (movementStarted && (touchTime - startTime) > 1400) {
-				beepOk(2); //"faster"
-				failCause = tooslow;
-			}
-			else {
-				beepOk(31);
-				failCause = success;
-			}
-			currentState = feedback;
-
-		}
-		break;
-
-
-	case feedback:
-		holdStillCount++;
-		if (holdStillCount >= 50 && !handNearObject) {
-			holdStillCount = 0;
-			currentState = preparingTrial;
-			advanceTrial();
-		}
-		break;
 
 	}
 
@@ -1860,11 +1676,11 @@ int main(int argc, char* argv[])
 
 	// initializes optotrak and velmex motors
 	initOptotrak();
-	initMotors();
+	//initMotors();
 
 	rotTable = stepper_connect();
-	cerr << 'bby1' << endl;
-	homeEverything(6000, 4000);
+
+	//homeEverything(6000, 4000);
 
 	// initializing glut
 	glutInit(&argc, argv);
