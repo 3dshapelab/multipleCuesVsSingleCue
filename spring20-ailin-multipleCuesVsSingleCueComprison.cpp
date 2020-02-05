@@ -15,6 +15,13 @@
 // as for 4/9/2018
 // need to show which side is intermixed
 // need to get the training grasp going
+
+// add shades 2/5/2020
+// To add shades, you'll need to define light_ambient, light_diffuse, light_direction and ojbect_color
+// also enable a lot of lighting relevant functions/features? (currently in drawClyinder)
+// also define normals for each vertex and creat the normal array (I put it in the buildCylinder together with the vertex array)
+// also points to the array glNormalPointer(GL_FLOAT, 0, normals);
+
 #include <cstdlib>
 #include <cmath>
 #include <iostream>
@@ -369,6 +376,12 @@ TrialFeedback failCause = success;
 enum trialTypes { train_session, train_buffer, trial_grasp };
 trialTypes currentTrial = train_session;
 
+/********** SET THE LIGHT ***********/
+// setting up the light
+GLfloat light_ambient[] = {0.f, 0.f, 0.f, 1.f};
+GLfloat light_diffuse[] = {1.f, 1.f, 1.f, 1.f};
+GLfloat light_dir[] = {0.f, 0.f, 1.f, 0.f};
+GLfloat cylinder_color[] = {1.f, 0.f, 0.f, 1.f};
 
 /********** FUNCTION PROTOTYPES *****/
 void beepOk(int tone);
@@ -763,7 +776,9 @@ double calculateDepth(double depth, double y){
 
 void buildCylinder(double textureDepth, double dispDepth) {
 
+	// edge is the long axis of the ellipse (along y axis), the short axis of the ellipse is along z axis
 	edge = tan((DEG2RAD * visual_angle) / 2) * 2 * (abs(display_distance) + depth);
+	// the x dimension, does not change the shape of the ellipse, but it is the length of the cylinder bar
 	cylinder_width = 1.5 * edge;
 	if (textureDepth == dispDepth) {
 		text_disp_conflict = false;
@@ -776,9 +791,6 @@ void buildCylinder(double textureDepth, double dispDepth) {
 	double nr_points = 500; // nr of points in x and y
 	double step_size = (cylinder_width / (nr_points - 1));
 
-	cout << "edge size: " << edge << endl;
-	cout << "adjusted edge size to ensure edge is hidden by aperture: " << edge << endl;
-
 	// build the meshgrid point by point
 	// indices for buffers
 	vertex_index = 0; tex_index = 0;
@@ -789,7 +801,7 @@ void buildCylinder(double textureDepth, double dispDepth) {
 	prev_side_point[2] = calculateDepth(textureDepth, (-edge / 2.));
 	int nr_vertices_per_row = nr_points;
 
-	double total_distance = 0; //tracks the distance along y/z axis
+	double total_distance = 0; //tracks the distance along y/z axis, approximate the "diameter" of the ellipse
 	double y; double x; double z;// preallocate variables to loop through the meshgrid
 
 	for (y = -edge / 2; y <= edge / 2 - step_size; y = y + step_size) {  // 
@@ -800,7 +812,6 @@ void buildCylinder(double textureDepth, double dispDepth) {
 			// here, we have all of the coordinates needed for this point. 
 			// append the appropriate x,y,z for each point into the array storing vertices
 			// also do color in the same iteration to be more efficient with only one index counter
-			// also populate the vertices array for the 2D sine wave. Remember, x is the 3D z dimensionm, y is y
 
 			// we also calculate the normal for each vertex for shading
 			// the normal of the ellipse is the point on the axis (x, 0, 0) to (x, y, z),
@@ -896,16 +907,13 @@ void drawAperture() {
 }
 
 void drawCylinder() {
-	GLfloat light_ambient[] = {0.f, 0.f, 0.f, 1.f};
-	GLfloat light_diffuse[] = {1.f, 1.f, 1.f, 1.f};
-	GLfloat light_dir[] = {0.0, 0.0, 1.f, 0.f};
-	GLfloat cylinder_color[] = {1.f, 0.f, 0.f, 1.f};
+
 	glLightfv(GL_LIGHT1, GL_AMBIENT, light_ambient);
 	glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse);
 	glLightfv(GL_LIGHT1, GL_POSITION, light_dir);
 	glEnable(GL_LIGHT1);
 	glEnable(GL_LIGHTING);
-	glEnable(GL_NORMALIZE);
+	glEnable(GL_NORMALIZE); //so we don't need to normalize our normal for surfaces
 	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, cylinder_color);
 
 	// define our transformation matrix to push back in depth, and do it
@@ -951,7 +959,7 @@ void drawCylinder() {
 
 	if (text_disp_conflict) {
 		glVertexPointer(3, GL_FLOAT, 0, vertices_projected);
-		glNormalPointer(GL_FLOAT, 0, normals);
+		glNormalPointer(GL_FLOAT, 0, normals); // put the normals in 
 	}
 	else {
 		glVertexPointer(3, GL_FLOAT, 0, vertices);
@@ -1250,10 +1258,10 @@ void handleKeypress(unsigned char key, int x, int y)
 		{
 
 			stepper_rotate(rotTable, 0, 238.67);
-			//homeEverything(5000, 4500);
+			homeEverything(5000, 4500);
 			stepper_close(rotTable);
 
-			//homeEverything(5000, 4500);
+			homeEverything(5000, 4500);
 
 			cleanup();
 			exit(0);
@@ -1676,11 +1684,11 @@ int main(int argc, char* argv[])
 
 	// initializes optotrak and velmex motors
 	initOptotrak();
-	//initMotors();
+	initMotors();
 
 	rotTable = stepper_connect();
-
-	//homeEverything(6000, 4000);
+	cerr << 'bby1' << endl;
+	homeEverything(6000, 4000);
 
 	// initializing glut
 	glutInit(&argc, argv);
