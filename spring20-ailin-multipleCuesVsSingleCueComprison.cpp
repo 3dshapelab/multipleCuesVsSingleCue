@@ -132,9 +132,7 @@ GLfloat fSizes[2];      // Line width range metrics
 GLfloat fCurrSize;
 GLfloat fCurrColor;
 bool light = false;
-GLfloat LightAmbient[] = { 0.5f, 0.5f, 0.5f, 1.0f };
-GLfloat LightDiffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-GLfloat LightPosition[] = { 0.0f, 100.0f, -100.0f, 1.0f };
+
 //__int64 pos;
 
 
@@ -376,12 +374,22 @@ TrialFeedback failCause = success;
 enum trialTypes { train_session, train_buffer, trial_grasp };
 trialTypes currentTrial = train_session;
 
+
+/********* LIGHTING ***************/
+/*GLfloat LightPosition[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat LightDiffuse[] = {.8f, 0.0f, 0.0f, 1.0f};
+float lightZ = -200.0;
+float lightAmb = 0.70;*/
+
+
 /********** SET THE LIGHT ***********/
 // setting up the light
+
 GLfloat light_ambient[] = {0.f, 0.f, 0.f, 1.f};
 GLfloat light_diffuse[] = {1.f, 1.f, 1.f, 1.f};
-GLfloat light_dir[] = {0.f, 0.f, 1.f, 0.f};
+GLfloat light_dir[] = {0.f, 0.4f, 0.8f, 0.f};
 GLfloat cylinder_color[] = {1.f, 0.f, 0.f, 1.f};
+
 
 /********** FUNCTION PROTOTYPES *****/
 void beepOk(int tone);
@@ -574,6 +582,10 @@ void initVariables()
 
 void drawInfo()
 {
+/*	glDisable(GL_COLOR_MATERIAL);
+	glDisable(GL_BLEND);
+	glDisable(GL_LIGHTING);*/
+
 	GLText text;
 	if (gameMode)
 		text.init(SCREEN_WIDTH, SCREEN_HEIGHT, glWhite, GLUT_BITMAP_HELVETICA_12);
@@ -760,7 +772,10 @@ void drawInfo()
 
 	}
 
-
+	/*
+	glEnable(GL_COLOR_MATERIAL);
+	glEnable(GL_BLEND);
+	glEnable(GL_LIGHTING);*/
 	text.leaveTextInputMode();
 
 }
@@ -907,14 +922,27 @@ void drawAperture() {
 }
 
 void drawCylinder() {
+/*
+	glEnable(GL_LIGHT0);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_NORMALIZE);
+	glLightfv(GL_LIGHT0, GL_POSITION, LightPosition);
+	GLfloat lmodel_ambient[] = {lightAmb, lightAmb, lightAmb, 1.0};
+	
+	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodel_ambient); 
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, LightDiffuse);
 
+*/
 	glLightfv(GL_LIGHT1, GL_AMBIENT, light_ambient);
 	glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse);
-	glLightfv(GL_LIGHT1, GL_POSITION, light_dir);
+	glLightfv(GL_LIGHT1, GL_POSITION, light_dir);	
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, cylinder_color);
 	glEnable(GL_LIGHT1);
 	glEnable(GL_LIGHTING);
 	glEnable(GL_NORMALIZE); //so we don't need to normalize our normal for surfaces
-	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, cylinder_color);
+	//glEnable(GL_COLOR_MATERIAL);
+	//glEnable(GL_BLEND);
+	//glEnable(GL_LIGHTING);
 
 	// define our transformation matrix to push back in depth, and do it
 	glLoadIdentity();
@@ -960,10 +988,12 @@ void drawCylinder() {
 	if (text_disp_conflict) {
 		glVertexPointer(3, GL_FLOAT, 0, vertices_projected);
 		glNormalPointer(GL_FLOAT, 0, normals); // put the normals in 
+		//glColorPointer(3, GL_FLOAT, 0, colors);
 	}
 	else {
 		glVertexPointer(3, GL_FLOAT, 0, vertices);
 		glNormalPointer(GL_FLOAT, 0, normals);
+		//glColorPointer(3, GL_FLOAT, 0, colors);
 	}
 
 	glTexCoordPointer(2, GL_FLOAT, 0, texcoors);
@@ -1258,10 +1288,10 @@ void handleKeypress(unsigned char key, int x, int y)
 		{
 
 			stepper_rotate(rotTable, 0, 238.67);
-			homeEverything(5000, 4500);
+			//homeEverything(5000, 4500);
 			stepper_close(rotTable);
 
-			homeEverything(5000, 4500);
+			//homeEverything(5000, 4500);
 
 			cleanup();
 			exit(0);
@@ -1684,11 +1714,11 @@ int main(int argc, char* argv[])
 
 	// initializes optotrak and velmex motors
 	initOptotrak();
-	initMotors();
+	//initMotors();
 
 	rotTable = stepper_connect();
 	cerr << 'bby1' << endl;
-	homeEverything(6000, 4000);
+	//homeEverything(6000, 4000);
 
 	// initializing glut
 	glutInit(&argc, argv);
@@ -1718,7 +1748,7 @@ int main(int argc, char* argv[])
 	glutMainLoop();
 	stepper_rotate(rotTable, 0, 238.67);
 	stepper_close(rotTable);
-	homeEverything(6000, 4000);
+	//homeEverything(6000, 4000);
 	cleanup();
 
 	return 0;
