@@ -385,9 +385,10 @@ float lightAmb = 0.70;*/
 /********** SET THE LIGHT ***********/
 // setting up the light
 
-GLfloat light_ambient[] = {0.f, 0.f, 0.f, 1.f};
+GLfloat light_ambient[] = {0.2f, 0.2f, 0.2f, 1.f};
 GLfloat light_diffuse[] = {1.f, 1.f, 1.f, 1.f};
 GLfloat light_dir[] = {0.f, 0.4f, 0.8f, 0.f};
+GLfloat cylinder_ambient[] = {1.f, 0.f, 0.f, 1.f};
 GLfloat cylinder_color[] = {1.f, 0.f, 0.f, 1.f};
 
 
@@ -936,8 +937,10 @@ void drawCylinder() {
 	glLightfv(GL_LIGHT1, GL_AMBIENT, light_ambient);
 	glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse);
 	glLightfv(GL_LIGHT1, GL_POSITION, light_dir);	
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, cylinder_ambient);
 	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, cylinder_color);
 	glEnable(GL_LIGHT1);
+	//glEnable(GL_LIGHT0);
 	glEnable(GL_LIGHTING);
 	glEnable(GL_NORMALIZE); //so we don't need to normalize our normal for surfaces
 	//glEnable(GL_COLOR_MATERIAL);
@@ -961,6 +964,8 @@ void drawCylinder() {
 	glEnable(GL_POLYGON_SMOOTH);
 	glEnable(GL_BLEND);
 	glEnable(GL_TEXTURE_2D);
+
+	//glColorPointer(3, GL_FLOAT, 0, colors);
 	// glColor3f(1.0f, 0.0f, 0.0f);
 
 	// bind the texture
@@ -984,16 +989,17 @@ void drawCylinder() {
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_NORMAL_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
 
 	if (text_disp_conflict) {
 		glVertexPointer(3, GL_FLOAT, 0, vertices_projected);
 		glNormalPointer(GL_FLOAT, 0, normals); // put the normals in 
-		//glColorPointer(3, GL_FLOAT, 0, colors);
+		glColorPointer(3, GL_FLOAT, 0, colors);
 	}
 	else {
 		glVertexPointer(3, GL_FLOAT, 0, vertices);
 		glNormalPointer(GL_FLOAT, 0, normals);
-		//glColorPointer(3, GL_FLOAT, 0, colors);
+		glColorPointer(3, GL_FLOAT, 0, colors);
 	}
 
 	glTexCoordPointer(2, GL_FLOAT, 0, texcoors);
@@ -1005,6 +1011,7 @@ void drawCylinder() {
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_NORMAL_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
 
 }
 
