@@ -376,7 +376,14 @@ trialTypes currentTrial = train_session;
 
 
 /********* LIGHTING ***************/
-/*GLfloat LightPosition[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat LightAmbient[] = { 0.10f, 0.f, 0.f, 1.0f };
+GLfloat LightDiffuse[] = { .6f, 0.0f, 0.0f, 1.0f };
+GLfloat LightSpecular[] = { .8f, 0.8f, 0.8f, 0.0f };
+//in the init trial now
+GLfloat LightPosition[] = {0.0f, 80.0f, 80.0f, 1.0f};
+//GLfloat LightPosition[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+GLfloat specularMaterial[] = { .25f, 0.25, 0.25, 1.0 };
+GLfloat shininessMaterial = 40.0f;/*GLfloat LightPosition[] = {0.0f, 0.0f, 0.0f, 1.0f};
 GLfloat LightDiffuse[] = {.8f, 0.0f, 0.0f, 1.0f};
 float lightZ = -200.0;
 float lightAmb = 0.70;*/
@@ -384,13 +391,13 @@ float lightAmb = 0.70;*/
 
 /********** SET THE LIGHT ***********/
 // setting up the light
-
+/*
 GLfloat light_ambient[] = {0.2f, 0.2f, 0.2f, 1.f};
 GLfloat light_diffuse[] = {1.f, 1.f, 1.f, 1.f};
 GLfloat light_dir[] = {0.f, 0.4f, 0.8f, 0.f};
 GLfloat cylinder_ambient[] = {1.f, 0.f, 0.f, 1.f};
 GLfloat cylinder_color[] = {1.f, 0.f, 0.f, 1.f};
-
+*/
 
 /********** FUNCTION PROTOTYPES *****/
 void beepOk(int tone);
@@ -431,6 +438,7 @@ void drawAperture();
 void initVariables();
 int LoadGLTextures();
 double calculateDepth(double depth, double y);
+void lighting();
 
 
 /*************************** EXPERIMENT SPECS ****************************/
@@ -583,9 +591,6 @@ void initVariables()
 
 void drawInfo()
 {
-/*	glDisable(GL_COLOR_MATERIAL);
-	glDisable(GL_BLEND);
-	glDisable(GL_LIGHTING);*/
 
 	GLText text;
 	if (gameMode)
@@ -773,10 +778,7 @@ void drawInfo()
 
 	}
 
-	/*
-	glEnable(GL_COLOR_MATERIAL);
-	glEnable(GL_BLEND);
-	glEnable(GL_LIGHTING);*/
+
 	text.leaveTextInputMode();
 
 }
@@ -934,11 +936,14 @@ void drawCylinder() {
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, LightDiffuse);
 
 */
+
+	/*
 	glLightfv(GL_LIGHT1, GL_AMBIENT, light_ambient);
 	glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse);
 	glLightfv(GL_LIGHT1, GL_POSITION, light_dir);	
 	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, cylinder_ambient);
 	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, cylinder_color);
+	
 	glEnable(GL_LIGHT1);
 	//glEnable(GL_LIGHT0);
 	glEnable(GL_LIGHTING);
@@ -946,25 +951,36 @@ void drawCylinder() {
 	//glEnable(GL_COLOR_MATERIAL);
 	//glEnable(GL_BLEND);
 	//glEnable(GL_LIGHTING);
-
+*/
 	// define our transformation matrix to push back in depth, and do it
-	glLoadIdentity();
+	
 
 	// rotation
 
 	//if (rotation_bool == 1) {
 
 	//}
+
+	glLoadIdentity();
 	glTranslated(visualOriginX, visualOriginY, visualOriginZ - depth );
 	//glTranslated(0, 0, display_distance - depth);
+
+	glMaterialfv(GL_FRONT, GL_SPECULAR, specularMaterial);
+	glMaterialf(GL_FRONT, GL_SHININESS, shininessMaterial);
+	glMaterialfv(GL_BACK, GL_SPECULAR, specularMaterial);
+	glMaterialf(GL_BACK, GL_SHININESS, shininessMaterial);
+	glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
+
 	if (rotation_bool == 1) {
 		glRotatef(90.0, 0.0, 0.0, 1.0); // 0, 0, 1
 	}
 	// enable matrices for use in drawing below
+	glEnable(GL_LIGHTING);
 	glEnable(GL_POLYGON_SMOOTH);
 	glEnable(GL_BLEND);
 	glEnable(GL_TEXTURE_2D);
-
+	
+	glEnable(GL_NORMALIZE); //so we don't need to normalize our normal for surfaces
 	//glColorPointer(3, GL_FLOAT, 0, colors);
 	// glColor3f(1.0f, 0.0f, 0.0f);
 
@@ -995,14 +1011,16 @@ void drawCylinder() {
 		glVertexPointer(3, GL_FLOAT, 0, vertices_projected);
 		glNormalPointer(GL_FLOAT, 0, normals); // put the normals in 
 		glColorPointer(3, GL_FLOAT, 0, colors);
+		glTexCoordPointer(2, GL_FLOAT, 0, texcoors);
 	}
 	else {
 		glVertexPointer(3, GL_FLOAT, 0, vertices);
 		glNormalPointer(GL_FLOAT, 0, normals);
 		glColorPointer(3, GL_FLOAT, 0, colors);
+		glTexCoordPointer(2, GL_FLOAT, 0, texcoors);
 	}
 
-	glTexCoordPointer(2, GL_FLOAT, 0, texcoors);
+	
 
 	// Draw the 3D sine wave
 	glDrawElements(GL_TRIANGLES, iFace, GL_UNSIGNED_INT, indices);
@@ -1605,6 +1623,24 @@ void online_trial() {
 
 }
 
+void lighting() {
+	// Set up the lighting
+	glShadeModel(GL_SMOOTH);
+	glEnable(GL_NORMALIZE);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_COLOR_MATERIAL);
+
+	glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);
+	glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);
+	glLightfv(GL_LIGHT1, GL_SPECULAR, LightSpecular);
+	glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 0.5f);
+
+	glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
+	glEnable(GL_LIGHT1);
+	glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
+
+}
+
 
 int LoadGLTextures()  // Load PNG And Convert To Textures
 {
@@ -1680,6 +1716,7 @@ glLoadIdentity();
 // Tieni questa riga per evitare che con l'antialiasing attivo le linee siano piu' sottili di un pixel e quindi
 // ballerine (le vedi vibrare)
 glLineWidth(1.5);
+lighting();
 
 }
 
