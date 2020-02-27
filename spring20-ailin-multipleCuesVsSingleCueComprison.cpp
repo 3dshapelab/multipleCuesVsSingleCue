@@ -326,6 +326,7 @@ double endTime;
 double touchTime;
 double drawTime;
 double totalTrial = num_depth * 30.0; // 30 bins
+float specMatValue = 0.25;
 /********* STATUS CHECK *********/
 int fingerCalibrationDone = 0;
 bool fingersCalibrated = false;
@@ -382,7 +383,7 @@ GLfloat LightSpecular[] = { .8f, 0.8f, 0.8f, 0.0f };
 //in the init trial now
 GLfloat LightPosition[] = {0.0f, 80.0f, 80.0f, 1.0f};
 //GLfloat LightPosition[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-GLfloat specularMaterial[] = { .25f, 0.25, 0.25, 1.0 };
+GLfloat specularMaterial[] = { specMatValue, specMatValue, specMatValue, 1.0 };
 GLfloat shininessMaterial = 40.0f;/*GLfloat LightPosition[] = {0.0f, 0.0f, 0.0f, 1.0f};
 GLfloat LightDiffuse[] = {.8f, 0.0f, 0.0f, 1.0f};
 float lightZ = -200.0;
@@ -721,7 +722,7 @@ void drawInfo()
 		text.draw("#");
 		text.draw("# Name: " + subjectName);
 		text.draw("# IOD: " + stringify<double>(interoculardistance));
-		text.draw("# haptic depth: " + stringify<double>(depth));
+		text.draw("# depth: " + stringify<double>(depth));
 		text.draw("centercal marker " + stringify< Eigen::Matrix<double, 1, 3> >(markers[4].p.transpose()));
 		text.draw("# stage: " + stringify<int>(currentState));
 		text.draw("# time: " + stringify<double>(trial_timer.getElapsedTimeInMilliSec()));
@@ -769,9 +770,6 @@ void drawInfo()
 		text.draw("# thm to target y: " + stringify<double>(y_dist_thm));
 		text.draw("# thm to target z: " + stringify<double>(z_dist_thm));
 		text.draw("# index to target z: " + stringify<double>(z_dist_ind));
-		text.draw("# visual origin X: " + stringify<double>(visualOriginX));
-		text.draw("# visual origin Y: " + stringify<double>(visualOriginY));
-		text.draw("# visual origin Z: " + stringify<double>(visualOriginZ));
 		text.draw("# texture: " + stringify<int>(texture_type));
 		text.draw("# time: " + stringify<double>(trial_timer.getElapsedTimeInMilliSec()));
 		
@@ -1046,16 +1044,17 @@ void initTrial() {
 		bin = ceil( double(trialNum) / double(num_depth) );
 		objId = trial.getCurrent()["objectID"];
 		texnum = (rand() % 50) + 1;
+		/*
 		if(bin <= 5 || bin > 25){
 			texture_type = 3;
 		}else{
 			texture_type = 0;
 		}
-
+*/
 	//target_jitterZ = - rand() % 16; 
 	//moveTo[2] = target_thm_Z - targetMarker_origin_offsetZ + target_jitterZ;
 	//moveObjectAbsolute(moveTo, centercal, 6200);		
-	depth = objSizes[objId];
+	//depth = objSizes[objId];
 	target_angle = objStepperPosns[objId];
 	
 	buildCylinder(depth, depth);
@@ -1278,6 +1277,7 @@ void handleKeypress(unsigned char key, int x, int y)
 		initTrial();
 		}
 		break;
+		
 
 	case 't':
 	case 'T':
@@ -1346,6 +1346,39 @@ void handleKeypress(unsigned char key, int x, int y)
 
 			
 		
+		break;
+
+	case 's':
+	case 'S':
+		{ 
+			depth = depth + 5;
+			buildCylinder(depth, depth);
+
+		}
+		break;
+
+	case 'd':
+	case 'D':
+		{  
+			depth = depth - 5;
+			buildCylinder(depth, depth);
+		}
+		break;
+
+	case 'e':
+	case 'E':
+		{  
+		//LightDiffuse[] = {.0f, 0.0f, 0.0f, 1.0f};
+		initTrial();
+		}
+		break;
+
+	case 'r':
+	case 'R':
+		{  
+		//LightDiffuse[] = {.6f, 0.0f, 0.0f, 1.0f};
+		initTrial();
+		}
 		break;
 
 	}
