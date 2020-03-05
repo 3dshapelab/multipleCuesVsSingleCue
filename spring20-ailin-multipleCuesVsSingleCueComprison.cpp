@@ -355,24 +355,25 @@ trialTypes currentTrial = train_session;
 
 
 /********* LIGHTING ***************/
-float ambientRed = 0.1;
+float ambientRed = 0.25;
 GLfloat LightAmbient[] = { ambientRed, 0.f, 0.f, 1.0f };
 
 float diffuseRed = 0.6;
 GLfloat LightDiffuse[] = { diffuseRed, 0.0f, 0.0f, 1.0f };
 
-float lightPos_YZ = 80.0;
-GLfloat LightPosition[] = {0.0f, lightPos_YZ, lightPos_YZ, 1.0f};
+float lightPos_Y = 80.0;
+float lightPos_Z = 100.0;
+GLfloat LightPosition[] = {0.0f, lightPos_Y, lightPos_Z, 1.0f};
 
-float diffuseValue = 0.8;
-GLfloat LightSpecular[] = { diffuseValue, diffuseValue, diffuseValue, 0.0f };
+float specularValue = 1.0;
+GLfloat LightSpecular[] = { specularValue, specularValue, specularValue, 0.0f };
 
-float specMatValue = 0.3;
-GLfloat specularMaterial[] = { specMatValue, specMatValue, specMatValue, 1.0 };
+float specularMaterialValue = 0.2;
+GLfloat specularMaterial[] = { specularMaterialValue, specularMaterialValue, specularMaterialValue, 1.0 };
 
 GLfloat shininessMaterial = 40.0f;
 
-int lightMode = 0; // if 0, no diffuse or specular; if 1, diffuse only; if 2, bith diffuse and spec 
+//int lightMode = 0; // if 0, no diffuse or specular; if 1, diffuse only; if 2, bith diffuse and spec 
 
 /********** FUNCTION PROTOTYPES *****/
 void beepOk(int tone);
@@ -726,28 +727,14 @@ void drawInfo()
 		// if IOD has been input
 
 		glColor3fv(glWhite);
-		text.draw("# Trial: " + stringify<int>(trialNum));
-		text.draw("# Hold Still Count: " + stringify<int>(holdStillCount));
-		text.draw("# Home Hold Still Count: " + stringify<int>(holdStillCountAtHome));
+		text.draw("# diffuseRed: " + stringify<float>(diffuseRed));
+		text.draw("# specularMaterialValue: " + stringify<float>(specularMaterialValue));
+		text.draw("# shininessMaterial: " + stringify<float>(shininessMaterial));
+		text.draw("# lightPos_Y: " + stringify<float>(lightPos_Y));
+		text.draw("# lightPos_Z: " + stringify<float>(lightPos_Z));
+		text.draw("# depth: " + stringify<double>(depth));
 
-		glColor3fv(glWhite);
-		text.draw("#######################");
-		text.draw("Calibration Step= " + stringify<int>(fingerCalibrationDone));
-
-		// the following will be always be drawn
-		glColor3fv(glWhite);
-		//if (handNearObject)
-		//	text.draw("hand near object");
-		text.draw("# distance to Ojbect: " + stringify<double>(distanceGripCenterToObject));
-		//			text.draw("# progress: " + stringify<int>(percentComplete));
-		text.draw("# current state: " + stringify<int>(currentState));
-		text.draw("# thm to target y: " + stringify<double>(y_dist_thm));
-		text.draw("# thm to target z: " + stringify<double>(z_dist_thm));
-		text.draw("# index to target z: " + stringify<double>(z_dist_ind));
-		text.draw("# texture: " + stringify<int>(texture_type));
-		text.draw("# time: " + stringify<double>(trial_timer.getElapsedTimeInMilliSec()));
-		
-
+	
 	}
 
 
@@ -1246,19 +1233,6 @@ void handleKeypress(unsigned char key, int x, int y)
 		checkInfo = !checkInfo;
 		break;
 
-	case 'm':
-		{
-			interoculardistance += 0.5;
-			headEyeCoords.setInterOcularDistance(interoculardistance);
-		}
-		break;
-	case 'n':
-		{
-			interoculardistance -= 0.5;
-			headEyeCoords.setInterOcularDistance(interoculardistance);
-		}
-		break;
-
 
 	case 27:	//corrisponde al tasto ESC
 		{
@@ -1299,8 +1273,8 @@ void handleKeypress(unsigned char key, int x, int y)
 		
 		break;
 
-	case 's':
-	case 'S':
+	case 'k':
+	case 'K':
 		{ 
 			depth = depth + 5;
 			buildCylinder(depth, depth);
@@ -1308,8 +1282,8 @@ void handleKeypress(unsigned char key, int x, int y)
 		}
 		break;
 
-	case 'd':
-	case 'D':
+	case 'l':
+	case 'L':
 		{  
 			depth = depth - 5;
 			buildCylinder(depth, depth);
@@ -1319,20 +1293,95 @@ void handleKeypress(unsigned char key, int x, int y)
 	case 'e':
 	case 'E':
 		{  
-		//LightDiffuse = {.0f, 0.0f, 0.0f, 1.0f};
-		//buildCylinder(depth, depth);
-		LightDiffuse[0] = 0.0f;
-		LightDiffuse[1] = 0.0f;
-		LightDiffuse[2] = 0.0f;
+		specularMaterialValue = specularMaterialValue - 0.04;
+		if(specularMaterialValue >= 0){
+			specularMaterial[0] = specularMaterialValue;
+			specularMaterial[1] = specularMaterialValue;
+			specularMaterial[2] = specularMaterialValue;
+			}
 		}
 		break;
 
 	case 'r':
 	case 'R':
 		{  
-		specularMaterial[0] = 0.0f;
-		specularMaterial[1] = 0.0f;
-		specularMaterial[2] = 0.0f;
+
+		specularMaterialValue = specularMaterialValue + 0.04;
+		if(specularMaterialValue <= 1.0){
+			specularMaterial[0] = specularMaterialValue;
+			specularMaterial[1] = specularMaterialValue;
+			specularMaterial[2] = specularMaterialValue;
+			}
+		}
+		break;
+
+
+	case 'd':
+	case 'D':
+		{  
+		diffuseRed = diffuseRed + 0.1;
+		if(diffuseRed <= 1.0){
+			LightDiffuse[0] = diffuseRed;
+			}
+		}
+		break;
+
+	case 's':
+	case 'S':
+		{  
+		diffuseRed = diffuseRed - 0.1;
+		if(diffuseRed >= 0){
+			LightDiffuse[0] = diffuseRed;
+			}
+		}
+		break;
+
+	case 'o':
+	case 'O':
+		{  
+		lightPos_Y = lightPos_Y - 10;
+		LightPosition[1] = lightPos_Y;
+			
+		}
+		break;
+
+	case 'p':
+	case 'P':
+		{  
+		lightPos_Y = lightPos_Y + 10;
+		LightPosition[1] = lightPos_Y;
+		}
+		break;
+
+	case 'm':
+	case 'M':
+		{  
+		lightPos_Z = lightPos_Z + 10;
+		LightPosition[2] = lightPos_Z;
+		}
+		break;
+
+	case 'n':
+	case 'N':
+		{  
+		lightPos_Z = lightPos_Z - 10;
+		LightPosition[2] = lightPos_Z;
+		}
+		break;
+
+	case 'j':
+	case 'J':
+		{ 
+			shininessMaterial = shininessMaterial + 5;
+
+		}
+		break;
+
+	case 'h':
+	case 'H':
+		{ 
+			shininessMaterial = shininessMaterial - 5;
+
 		}
 		break;
 
