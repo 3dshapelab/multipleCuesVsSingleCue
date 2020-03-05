@@ -128,7 +128,7 @@ int mirror1 = 6, mirror2 = 22;
 double markerXOffset = 10;
 double markerYOffset = 10;
 
-int centercalMarker = 4;
+int centercalMarker = 1;
 
 double target_angle = 0.0;
 double objSizes[5] = { 30.0, 34.0, 38.0, 42.0 ,26.0 };
@@ -358,11 +358,12 @@ trialTypes currentTrial = train_session;
 float ambientRed = 0.25;
 GLfloat LightAmbient[] = { ambientRed, 0.f, 0.f, 1.0f };
 
-float diffuseRed = 0.6;
+float diffuseRed = 0.95;
 GLfloat LightDiffuse[] = { diffuseRed, 0.0f, 0.0f, 1.0f };
 
+//float LightDist = 120.0;
 float lightPos_Y = 80.0;
-float lightPos_Z = 100.0;
+float lightPos_Z = 160.0;
 GLfloat LightPosition[] = {0.0f, lightPos_Y, lightPos_Z, 1.0f};
 
 float specularValue = 1.0;
@@ -371,7 +372,7 @@ GLfloat LightSpecular[] = { specularValue, specularValue, specularValue, 0.0f };
 float specularMaterialValue = 0.2;
 GLfloat specularMaterial[] = { specularMaterialValue, specularMaterialValue, specularMaterialValue, 1.0 };
 
-GLfloat shininessMaterial = 40.0f;
+GLfloat shininessMaterial = 70.0f;
 
 //int lightMode = 0; // if 0, no diffuse or specular; if 1, diffuse only; if 2, bith diffuse and spec 
 
@@ -728,8 +729,8 @@ void drawInfo()
 
 		glColor3fv(glWhite);
 		text.draw("# diffuseRed: " + stringify<float>(diffuseRed));
-		text.draw("# specularMaterialValue: " + stringify<float>(specularMaterialValue));
-		text.draw("# shininessMaterial: " + stringify<float>(shininessMaterial));
+		text.draw("# ambientRed: " + stringify<float>(ambientRed));
+
 		text.draw("# lightPos_Y: " + stringify<float>(lightPos_Y));
 		text.draw("# lightPos_Z: " + stringify<float>(lightPos_Z));
 		text.draw("# depth: " + stringify<double>(depth));
@@ -799,11 +800,11 @@ void buildCylinder(double textureDepth, double dispDepth) {
 			vertex_index++;
 			vertices[vertex_index] = y; // this is y
 			colors[vertex_index] = 0;  // G is this value
-			normals[vertex_index] = y; // this is y
+			normals[vertex_index] = y * depth * depth; // this is y
 			vertex_index++;
 			vertices[vertex_index] = z; // this is z
 			colors[vertex_index] = 0; // B is this value
-			normals[vertex_index] = z; // this is z
+			normals[vertex_index] = z * edge * edge / 4; // this is z
 			vertex_index++;
 
 			texcoors[tex_index] = (x + edge / 2) / normalizer; tex_index++;//u coordinate
@@ -1293,11 +1294,9 @@ void handleKeypress(unsigned char key, int x, int y)
 	case 'e':
 	case 'E':
 		{  
-		specularMaterialValue = specularMaterialValue - 0.04;
-		if(specularMaterialValue >= 0){
-			specularMaterial[0] = specularMaterialValue;
-			specularMaterial[1] = specularMaterialValue;
-			specularMaterial[2] = specularMaterialValue;
+		if(ambientRed >= 0){ 
+			ambientRed = ambientRed - 0.02;		
+			LightAmbient[0] = ambientRed;
 			}
 		}
 		break;
@@ -1305,12 +1304,9 @@ void handleKeypress(unsigned char key, int x, int y)
 	case 'r':
 	case 'R':
 		{  
-
-		specularMaterialValue = specularMaterialValue + 0.04;
-		if(specularMaterialValue <= 1.0){
-			specularMaterial[0] = specularMaterialValue;
-			specularMaterial[1] = specularMaterialValue;
-			specularMaterial[2] = specularMaterialValue;
+		if(ambientRed <= 1){ 
+			ambientRed = ambientRed + 0.02;		
+			LightAmbient[0] = ambientRed;
 			}
 		}
 		break;
@@ -1318,9 +1314,9 @@ void handleKeypress(unsigned char key, int x, int y)
 
 	case 'd':
 	case 'D':
-		{  
-		diffuseRed = diffuseRed + 0.1;
-		if(diffuseRed <= 1.0){
+		{
+		if(diffuseRed <= 1.0){  
+			diffuseRed = diffuseRed + 0.05;		
 			LightDiffuse[0] = diffuseRed;
 			}
 		}
@@ -1328,9 +1324,9 @@ void handleKeypress(unsigned char key, int x, int y)
 
 	case 's':
 	case 'S':
-		{  
-		diffuseRed = diffuseRed - 0.1;
-		if(diffuseRed >= 0){
+		{ 
+		if(diffuseRed >= 0){ 
+			diffuseRed = diffuseRed - 0.05;		
 			LightDiffuse[0] = diffuseRed;
 			}
 		}
@@ -1381,6 +1377,40 @@ void handleKeypress(unsigned char key, int x, int y)
 	case 'H':
 		{ 
 			shininessMaterial = shininessMaterial - 5;
+
+		}
+		break;
+
+	case '1':
+		{ 
+			LightAmbient[0] = 0.5;
+			LightDiffuse[0] = 0.0;
+			specularMaterial[0] = 0.0;
+			specularMaterial[1] = 0.0;
+			specularMaterial[2] = 0.0;
+
+		}
+		break;
+
+	case '2':
+		{ 
+			LightAmbient[0] = 0.22;
+			LightDiffuse[0] = 0.98;
+			specularMaterial[0] = 0.0;
+			specularMaterial[1] = 0.0;
+			specularMaterial[2] = 0.0;
+
+		}
+		break;
+
+	case '3':
+
+		{ 
+			//LightAmbient[0] = 0.2;
+			//LightDiffuse[0] = 0.8;
+			specularMaterial[0] = 0.25;
+			specularMaterial[1] = 0.25;
+			specularMaterial[2] = 0.25;
 
 		}
 		break;
