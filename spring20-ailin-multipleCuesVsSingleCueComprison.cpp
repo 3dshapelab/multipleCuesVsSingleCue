@@ -1,26 +1,4 @@
-// 8/3/2018 trying to solve the problem of the start
-// 7/24/2018 1. add a prractice trial block (block 0) 2. add the spoken command 3. make it spin all the time 
-//4. solve the moving when occluded problem 5. change the response key from "4" to "+"
 
-// 7/19/2018
-// This script got the 
-// record the movement until response made or until hand back home?
-// feature to add: add the indicator of "right" or "on target" in intermixed tasks
-// feature to add: adding the audio "right" "on target" 
-// feature to add: training for location - use dots cloud
-// feature to add: a short break for introduction right before training
-// feature to add: take break anytime
-// feature to add: training again if mistakes
-
-// as for 4/9/2018
-// need to show which side is intermixed
-// need to get the training grasp going
-
-// add shades 2/5/2020
-// To add shades, you'll need to define light_ambient, light_diffuse, light_direction and ojbect_color
-// also enable a lot of lighting relevant functions/features? (currently in drawClyinder)
-// also define normals for each vertex and creat the normal array (I put it in the buildCylinder together with the vertex array)
-// also points to the array glNormalPointer(GL_FLOAT, 0, normals);
 
 #include <cstdlib>
 #include <cmath>
@@ -326,7 +304,7 @@ double endTime;
 double touchTime;
 double drawTime;
 double totalTrial = num_depth * 30.0; // 30 bins
-float specMatValue = 0.25;
+
 /********* STATUS CHECK *********/
 int fingerCalibrationDone = 0;
 bool fingersCalibrated = false;
@@ -377,28 +355,24 @@ trialTypes currentTrial = train_session;
 
 
 /********* LIGHTING ***************/
-GLfloat LightAmbient[] = { 0.10f, 0.f, 0.f, 1.0f };
-GLfloat LightDiffuse[] = { .6f, 0.0f, 0.0f, 1.0f };
-GLfloat LightSpecular[] = { .8f, 0.8f, 0.8f, 0.0f };
-//in the init trial now
-GLfloat LightPosition[] = {0.0f, 80.0f, 80.0f, 1.0f};
-//GLfloat LightPosition[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+float ambientRed = 0.1;
+GLfloat LightAmbient[] = { ambientRed, 0.f, 0.f, 1.0f };
+
+float diffuseRed = 0.6;
+GLfloat LightDiffuse[] = { diffuseRed, 0.0f, 0.0f, 1.0f };
+
+float lightPos_YZ = 80.0;
+GLfloat LightPosition[] = {0.0f, lightPos_YZ, lightPos_YZ, 1.0f};
+
+float diffuseValue = 0.8;
+GLfloat LightSpecular[] = { diffuseValue, diffuseValue, diffuseValue, 0.0f };
+
+float specMatValue = 0.3;
 GLfloat specularMaterial[] = { specMatValue, specMatValue, specMatValue, 1.0 };
-GLfloat shininessMaterial = 40.0f;/*GLfloat LightPosition[] = {0.0f, 0.0f, 0.0f, 1.0f};
-GLfloat LightDiffuse[] = {.8f, 0.0f, 0.0f, 1.0f};
-float lightZ = -200.0;
-float lightAmb = 0.70;*/
 
+GLfloat shininessMaterial = 40.0f;
 
-/********** SET THE LIGHT ***********/
-// setting up the light
-/*
-GLfloat light_ambient[] = {0.2f, 0.2f, 0.2f, 1.f};
-GLfloat light_diffuse[] = {1.f, 1.f, 1.f, 1.f};
-GLfloat light_dir[] = {0.f, 0.4f, 0.8f, 0.f};
-GLfloat cylinder_ambient[] = {1.f, 0.f, 0.f, 1.f};
-GLfloat cylinder_color[] = {1.f, 0.f, 0.f, 1.f};
-*/
+int lightMode = 0; // if 0, no diffuse or specular; if 1, diffuse only; if 2, bith diffuse and spec 
 
 /********** FUNCTION PROTOTYPES *****/
 void beepOk(int tone);
@@ -923,45 +897,22 @@ void drawAperture() {
 }
 
 void drawCylinder() {
-/*
-	glEnable(GL_LIGHT0);
-	glEnable(GL_LIGHTING);
-	glEnable(GL_NORMALIZE);
-	glLightfv(GL_LIGHT0, GL_POSITION, LightPosition);
-	GLfloat lmodel_ambient[] = {lightAmb, lightAmb, lightAmb, 1.0};
-	
-	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodel_ambient); 
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, LightDiffuse);
 
-*/
-
-	/*
-	glLightfv(GL_LIGHT1, GL_AMBIENT, light_ambient);
-	glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse);
-	glLightfv(GL_LIGHT1, GL_POSITION, light_dir);	
-	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, cylinder_ambient);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, cylinder_color);
-	
-	glEnable(GL_LIGHT1);
-	//glEnable(GL_LIGHT0);
-	glEnable(GL_LIGHTING);
-	glEnable(GL_NORMALIZE); //so we don't need to normalize our normal for surfaces
-	//glEnable(GL_COLOR_MATERIAL);
-	//glEnable(GL_BLEND);
-	//glEnable(GL_LIGHTING);
-*/
-	// define our transformation matrix to push back in depth, and do it
-	
-
-	// rotation
-
-	//if (rotation_bool == 1) {
-
-	//}
 
 	glLoadIdentity();
 	glTranslated(visualOriginX, visualOriginY, visualOriginZ - depth );
+	
+	//glEnable(GL_LIGHT1);
+	//glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
+
+	glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);
+	glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);
+	glLightfv(GL_LIGHT1, GL_SPECULAR, LightSpecular);
+	glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 0.5f);
+	glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
 	//glTranslated(0, 0, display_distance - depth);
+
+
 
 	glMaterialfv(GL_FRONT, GL_SPECULAR, specularMaterial);
 	glMaterialf(GL_FRONT, GL_SHININESS, shininessMaterial);
@@ -1368,16 +1319,20 @@ void handleKeypress(unsigned char key, int x, int y)
 	case 'e':
 	case 'E':
 		{  
-		//LightDiffuse[] = {.0f, 0.0f, 0.0f, 1.0f};
-		initTrial();
+		//LightDiffuse = {.0f, 0.0f, 0.0f, 1.0f};
+		//buildCylinder(depth, depth);
+		LightDiffuse[0] = 0.0f;
+		LightDiffuse[1] = 0.0f;
+		LightDiffuse[2] = 0.0f;
 		}
 		break;
 
 	case 'r':
 	case 'R':
 		{  
-		//LightDiffuse[] = {.6f, 0.0f, 0.0f, 1.0f};
-		initTrial();
+		specularMaterial[0] = 0.0f;
+		specularMaterial[1] = 0.0f;
+		specularMaterial[2] = 0.0f;
 		}
 		break;
 
@@ -1657,18 +1612,19 @@ void online_trial() {
 }
 
 void lighting() {
+
 	// Set up the lighting
 	glShadeModel(GL_SMOOTH);
 	glEnable(GL_NORMALIZE);
 	glEnable(GL_LIGHTING);
 	glEnable(GL_COLOR_MATERIAL);
 
-	glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);
-	glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);
-	glLightfv(GL_LIGHT1, GL_SPECULAR, LightSpecular);
-	glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 0.5f);
+	//glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);
+	//glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);
+	//glLightfv(GL_LIGHT1, GL_SPECULAR, LightSpecular);
+	//glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 0.5f);
 
-	glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
+	//glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
 	glEnable(GL_LIGHT1);
 	glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
 
@@ -1751,6 +1707,8 @@ glLoadIdentity();
 glLineWidth(1.5);
 lighting();
 
+	
+	
 }
 
 void initMotors()
