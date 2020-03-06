@@ -125,12 +125,33 @@ GLuint* texture[51];
 //GLfloat *vertices = new GLfloat[1];
 GLfloat vertices[10000000];
 GLfloat vertices_projected[10000000];
+GLfloat normals[10000000];
 GLuint indices[10000000];
 GLfloat texcoors[10000000];
 int vertex_index, tex_index = 0; int iFace; int nr_triangles; int nr_vertices;
 
 //color arrays, where texture is defined
 GLfloat colors[5000000];
+
+/********* LIGHTING ***************/
+float ambientRed = 0.25;
+GLfloat LightAmbient[] = { ambientRed, 0.f, 0.f, 1.0f };
+
+float diffuseRed = 0.95;
+GLfloat LightDiffuse[] = { diffuseRed, 0.0f, 0.0f, 1.0f };
+
+//float LightDist = 120.0;
+float lightPos_Y = 80.0;
+float lightPos_Z = 160.0;
+GLfloat LightPosition[] = {0.0f, lightPos_Y, lightPos_Z, 1.0f};
+
+float specularValue = 1.0;
+GLfloat LightSpecular[] = { specularValue, specularValue, specularValue, 0.0f };
+
+float specularMaterialValue = 0.2;
+GLfloat specularMaterial[] = { specularMaterialValue, specularMaterialValue, specularMaterialValue, 1.0 };
+
+GLfloat shininessMaterial = 70.0f;
 
 /********** TRIAL SPECIFIC PARAMETERS ***************/
 //Vector3d dot_placement[100000];
@@ -233,6 +254,7 @@ void initProjectionScreen(double _focalDist, const Affine3d &_transformation=Aff
 void online_apparatus_alignment();
 void buildCylinder(double textureDepth, double dispDepth);
 void drawAperture();
+void lighting();
 // This function seems to be used to shut down the system after use
 void shutdown(){
 	cout << "shutting down" << endl;
@@ -319,7 +341,7 @@ glLoadIdentity();
 // Tieni questa riga per evitare che con l'antialiasing attivo le linee siano piu' sottili di un pixel e quindi
 // ballerine (le vedi vibrare)
 glLineWidth(1.5);
-
+lighting();
 }
 //Extracts constants from parameters file. Used in the method defined below
 void initVariables()
@@ -611,10 +633,15 @@ void buildCylinder(double textureDepth, double dispDepth){
 			
 			vertices[vertex_index] = x;  // this is x
 			colors[vertex_index] = 1; vertex_index ++;  //R is this value
+			normals[vertex_index] = 0; // this is x
+
 			vertices[vertex_index] = y; // this is y
 			colors[vertex_index] = 0; vertex_index ++; // G is this value
+			normals[vertex_index] = y * depth * depth; // this is y
+
 			vertices[vertex_index] = z; //z. 
 			colors[vertex_index] = 0; vertex_index ++; // B is this value
+			normals[vertex_index] = z * edge * edge / 4; // this is z
 
 			texcoors[tex_index] =  (x + edge / 2) / normalizer; tex_index ++;//u coordinate
 			texcoors[tex_index] =  total_distance / normalizer; tex_index ++;//v coordinate
@@ -706,35 +733,53 @@ void drawProbe(double probe_depth){
 	glPopMatrix();
 }
 
-void drawCylinder(){
+void drawCylinder() {
 
-	// define our transformation matrix to push back in depth, and do it
+
 	glLoadIdentity();
-
-	// rotation
-	
-	//if (rotation_bool == 1) {
-	
-	//}
-
 	glTranslated(0, 0, display_distance - depth_disp);
 	if(rotation_bool == 0){
 	glRotatef(90.0, 0.0, 0.0 ,1.0); // 0, 0, 1
 	}
+	//glEnable(GL_LIGHT1);
+	//glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
+
+	glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);
+	glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);
+	glLightfv(GL_LIGHT1, GL_SPECULAR, LightSpecular);
+	glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 0.5f);
+	glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
+	//glTranslated(0, 0, display_distance - depth);
+
+
+
+	glMaterialfv(GL_FRONT, GL_SPECULAR, specularMaterial);
+	glMaterialf(GL_FRONT, GL_SHININESS, shininessMaterial);
+	glMaterialfv(GL_BACK, GL_SPECULAR, specularMaterial);
+	glMaterialf(GL_BACK, GL_SHININESS, shininessMaterial);
+	glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
+
 	// enable matrices for use in drawing below
-	glEnable (GL_POLYGON_SMOOTH);
-	glEnable (GL_BLEND);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_POLYGON_SMOOTH);
+	glEnable(GL_BLEND);
 	glEnable(GL_TEXTURE_2D);
-	glColor3f(1.0f, 0.0f, 0.0f);
+	
+	glEnable(GL_NORMALIZE); //so we don't need to normalize our normal for surfaces
+	//glColorPointer(3, GL_FLOAT, 0, colors);
+	// glColor3f(1.0f, 0.0f, 0.0f);
 
 	// bind the texture
-	if (texture_type == 0){
+	if (texture_type == 0) {
 		glBindTexture(GL_TEXTURE_2D, texture0[texnum]);
-	} else if(texture_type == 1){
+	}
+	else if (texture_type == 1) {
 		glBindTexture(GL_TEXTURE_2D, texture1[texnum]);
-	} else if (texture_type == 2){
+	}
+	else if (texture_type == 2) {
 		glBindTexture(GL_TEXTURE_2D, texture2[texnum]);
-	} else {
+	}
+	else {
 		glBindTexture(GL_TEXTURE_2D, texture3[texnum]);
 	}
 
@@ -743,22 +788,33 @@ void drawCylinder(){
 
 	// activate and specify pointer to vertex array
 	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_NORMAL_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
 
 	if (text_disp_conflict) {
 		glVertexPointer(3, GL_FLOAT, 0, vertices_projected);
-	}else {
+		glNormalPointer(GL_FLOAT, 0, normals); // put the normals in 
+		glColorPointer(3, GL_FLOAT, 0, colors);
+		glTexCoordPointer(2, GL_FLOAT, 0, texcoors);
+	}
+	else {
 		glVertexPointer(3, GL_FLOAT, 0, vertices);
+		glNormalPointer(GL_FLOAT, 0, normals);
+		glColorPointer(3, GL_FLOAT, 0, colors);
+		glTexCoordPointer(2, GL_FLOAT, 0, texcoors);
 	}
 
-	glTexCoordPointer(2, GL_FLOAT, 0, texcoors);
+	
 
 	// Draw the 3D sine wave
 	glDrawElements(GL_TRIANGLES, iFace, GL_UNSIGNED_INT, indices);
-	
+
 	// deactivate vertex arrays after drawing
 	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_NORMAL_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
 
 }
 
@@ -1095,9 +1151,6 @@ void idle()
 void drawMarkerPosition(){
 	// this function displays the marker position for one of the markers set up for use with fingers
 	// used to display marker position and test calibration of the Optotrak in the depth plane
-	glDisable(GL_COLOR_MATERIAL);
-	glDisable(GL_BLEND);
-	glDisable(GL_LIGHTING);
 
 	GLText text;
 
@@ -1155,6 +1208,26 @@ void online_apparatus_alignment()
 		(markers.at(screen1).p.x() - markers.at(screen2).p.x());
 
 }
+
+void lighting() {
+
+	// Set up the lighting
+	glShadeModel(GL_SMOOTH);
+	glEnable(GL_NORMALIZE);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_COLOR_MATERIAL);
+
+	//glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);
+	//glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);
+	//glLightfv(GL_LIGHT1, GL_SPECULAR, LightSpecular);
+	//glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 0.5f);
+
+	//glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
+	glEnable(GL_LIGHT1);
+	glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
+
+}
+
 
 // this is run at compilation because it's titled 'main'
 int main(int argc, char*argv[])  
