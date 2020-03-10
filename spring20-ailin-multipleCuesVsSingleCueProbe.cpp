@@ -141,9 +141,10 @@ float diffuseRed = 0.95;
 GLfloat LightDiffuse[] = { diffuseRed, 0.0f, 0.0f, 1.0f };
 
 //float LightDist = 120.0;
+float lightPos_X = 0.0;
 float lightPos_Y = 80.0;
-float lightPos_Z = 160.0;
-GLfloat LightPosition[] = {0.0f, lightPos_Y, lightPos_Z, 1.0f};
+float lightPos_Z = 120.0;
+GLfloat LightPosition[] = {lightPos_X, lightPos_Y, lightPos_Z, 1.0f};
 
 float specularValue = 1.0;
 GLfloat LightSpecular[] = { specularValue, specularValue, specularValue, 0.0f };
@@ -165,11 +166,15 @@ int trialNumBlk = 0;
 int texnum = 0;
 
 //controls the factors 
+bool checkInfo = false;
 bool training = true;
 bool screenBack = false; //has the screen been placed at projection distance
 bool finished = false;
 double ElapsedTime;
 int trialNumber = 1;
+int num_depth = 5;
+int bin = 0;
+double totalTrial = num_depth * 20.0; // 30 bins
 
 // Timer variable, set for each trial 
 Timer trial_time;
@@ -194,7 +199,6 @@ double twoD_starting_depth = 0; // variable to note what the random starting 2D 
 double depth = 30;
 int texture_type = 0;
 double probe_edge = 100; // height of 2D sine wave to include only 1 period of 3D sine wave
-double rotation_bool = 0; //rotation boolean for the stimuli
 double circle_radius = 1;
 double probe_x_offset = 80;
 double probe_y_offset = 70;
@@ -214,7 +218,7 @@ int apertureState = 1; // 0 - no aperture; 1 - aperture black; 2 - aperture dark
 
 // stimulus depth
 double depth_text = 40;
-double depth_disp = 20;
+double depth_disp = 40;
 
 bool text_disp_conflict = true;
 /*************************** EXPERIMENT SPECS ****************************/
@@ -223,13 +227,13 @@ string subjectName;
 
 // experiment directory
 
-string experiment_directory = "C:/Users/visionlab/Documents/data/ailin/fall19-ailin-cueCompGraspAdaptation";
+string experiment_directory = "C:/Users/visionlab/Documents/data/ailin/spring20-ailin-cueCompProbe";
 
 // paramters file directory and name
-string parametersFile_directory = experiment_directory + "/parameters_fall19-ailin-cueCompGraspAdaptation.txt";
+string parametersFile_directory = experiment_directory + "/parameters_spring20-ailin-cueCompProbe.txt";
 
 // response file headers
-string responseFile_headers = "subjName\tIOD\ttrialN\ttextureType\ttexnum\tdisplayDistance\tvisualAngle\tprobeStart\tdisparityDepth\ttextureDepth\tperceivedDepth\ttime\tisRotated";
+string responseFile_headers = "subjName\tIOD\ttrialN\tbin\ttextureType\ttexnum\tdisplayDistance\tvisualAngle\tprobeStart\tdisparityDepth\ttextureDepth\tperceivedDepth\tambientRed\tdiffuseRed\tlightPos_Y\tlightPos_Z\ttime";
 
 /*************************** FUNCTIONS ***********************************/
 void initOptotrak();
@@ -473,29 +477,28 @@ void drawInfo()
 			else
 				glColor3fv(glGreen);
 			text.draw("# Screen Alignment Z = " +stringify<double>(screenAlignmentZ));
-			glColor3fv(glWhite);
-			// X and Z coords of simulated fixation
-			text.draw("# Fixation Z = " +stringify<double>(markers[19].p.x()-120.0)+ " [mm]");
-			text.draw("# Fixation X = " +stringify<double>(markers[19].p.z()+363.0)+ " [mm]");
+
 			text.draw(" ");
 
 			// if IOD has been input
-			if(interoculardistance>45.0)
+			if(checkInfo)
 			{
 				glColor3fv(glWhite);
 				//text.draw("# trial: " +stringify<int>(trialNumber));
-				text.draw("# disparity depth: " +stringify<int>(depth_disp));
-				text.draw("# texture depth: " +stringify<int>(depth_text));
+				//text.draw("# disparity depth: " +stringify<int>(depth_disp));
+				//text.draw("# texture depth: " +stringify<int>(depth_text));
 				//text.draw("# estimated depth: " +stringify<int>(estimated_depth));
 				//text.draw("# Texture type: " + stringify<int>(texture_type));
-				text.draw("# Texture base: " + stringify<double>(normalizer_base));
+				//text.draw("# Texture base: " + stringify<double>(normalizer_base));
 				//text.draw("# texnum: " + stringify<int>(texnum));
-				text.draw("# apertureState: " + stringify<int>(apertureState));
-				//text.draw("# time: " +stringify<int>(ElapsedTime));
-				//text.draw("# isRotate: " +stringify<int>(rotation_bool));
-				{
-					text.draw(" ");
-				}
+				//text.draw("# apertureState: " + stringify<int>(apertureState));
+		
+		text.draw("# diffuseRed: " + stringify<float>(diffuseRed));
+		text.draw("# ambientRed: " + stringify<float>(ambientRed));
+
+		text.draw("# lightPos_Y: " + stringify<float>(lightPos_Y));
+		text.draw("# lightPos_Z: " + stringify<float>(lightPos_Z));
+		text.draw("# depth: " + stringify<double>(depth));
 
 				text.leaveTextInputMode();
 				glEnable(GL_COLOR_MATERIAL);
@@ -508,10 +511,10 @@ void drawInfo()
 void drawFixation() {
 	// draws a small fixation cross at the center of the display
 	glDisable(GL_TEXTURE_2D);
-	glColor3f(1.0f, 0.0f, 0.0f);
+	glColor3f(0.1f, 0.0f, 0.0f);
 	glLineWidth(2.f);
 	glLoadIdentity();
-	glTranslated(0, 0, display_distance);
+	glTranslated(0, 0, display_distance - depth_disp + 2);
 	double cross_length = 5;
 	glBegin(GL_LINES);
 	glVertex3d(cross_length / 2. + circle_radius / 2., 0, 0);
@@ -530,10 +533,6 @@ void drawAperture(){
 	glLoadIdentity();
 	//glTranslated(0,0,display_distance + max_depth - depth_disp);
 	glTranslated(0,0,display_distance);
-	if(rotation_bool == 0){
-	glRotatef(90.0, 0.0, 0.0 ,1.0); // 0, 0, 1
-	}
-
 
 	if(apertureState == 2){
 		glColor3f(0.8f, 0.0f, 0.0f);
@@ -569,15 +568,15 @@ void drawStimulus()
 	// conditional to compare trialTime to determine what to present
 	if (trialTime < drawStimulusTime) {
 	// here, draw a fixation cross for 1000 ms 
-		//drawFixation();
+		drawFixation();
 	} else if (trialTime > drawStimulusTime) {
-	// Then draw the experimental stimulus
+	// Then draw the experimental stimulus	
 		drawCylinder();
 		drawProbe(estimated_depth);
 		 
 		//draw the 2D probe line
 		if(apertureState > 0){
-			drawAperture();
+			//drawAperture();
 		}
 	}
 }
@@ -591,22 +590,22 @@ double calculateDepth(double depth, double y){
 }
 
 
-void buildCylinder(double textureDepth, double dispDepth){
+void buildCylinder(double textureDepth, double dispDepth) {
 
-	edge = tan((DEG2RAD * visual_angle)/2) * 2 * (abs(display_distance) + depth_disp) ; 
+	// edge is the long axis of the ellipse (along y axis), the short axis of the ellipse is along z axis
+	edge = tan((DEG2RAD * visual_angle) / 2) * 2 * (abs(display_distance) + depth);
+	// the x dimension, does not change the shape of the ellipse, but it is the length of the cylinder bar
 	cylinder_width = 1.2 * edge;
-	if (textureDepth == dispDepth){
+	if (textureDepth == dispDepth) {
 		text_disp_conflict = false;
-	}else{
+	}
+	else {
 		text_disp_conflict = true;
 	}
 	cout << "Building Texture" << endl;
 
-	double nr_points = 1000; // nr of points in x and y
-	double step_size = (cylinder_width/(nr_points-1));
-	
-	cout << "edge size: " << edge << endl;
-	cout << "adjusted edge size to ensure edge is hidden by aperture: " << edge << endl;
+	double nr_points = 500; // nr of points in x and y
+	double step_size = (cylinder_width / (nr_points - 1));
 
 	// build the meshgrid point by point
 	// indices for buffers
@@ -614,37 +613,40 @@ void buildCylinder(double textureDepth, double dispDepth){
 	Vector3d prev_side_point;
 
 	//preallocate the first x,y,z coordinates for previous side point
-	prev_side_point[0] = -cylinder_width/2; prev_side_point[1] = -edge/2; 
-	prev_side_point[2] = calculateDepth(textureDepth, (-edge/2.));
+	prev_side_point[0] = -cylinder_width / 2; prev_side_point[1] = -edge / 2;
+	prev_side_point[2] = calculateDepth(textureDepth, (-edge / 2.));
 	int nr_vertices_per_row = nr_points;
 
-	double total_distance = 0; //tracks the distance along y/z axis
+	double total_distance = 0; //tracks the distance along y/z axis, approximate the "diameter" of the ellipse
 	double y; double x; double z;// preallocate variables to loop through the meshgrid
 
-	for ( y = -edge/2; y <= edge/2 - step_size; y = y + step_size){  // 
+	for (y = -edge / 2; y <= edge / 2 - step_size; y = y + step_size) {  // 
 
 		z = calculateDepth(textureDepth, y); // Get depth for this point
 
-		for ( x = -cylinder_width/2; x <= cylinder_width/2 - step_size; x = x + step_size){ //
+		for (x = -cylinder_width / 2; x <= cylinder_width / 2 - step_size; x = x + step_size) { //
 			// here, we have all of the coordinates needed for this point. 
 			// append the appropriate x,y,z for each point into the array storing vertices
 			// also do color in the same iteration to be more efficient with only one index counter
-			// also populate the vertices array for the 2D sine wave. Remember, x is the 3D z dimensionm, y is y
-			
+
+			// we also calculate the normal for each vertex for shading
+			// the normal of the ellipse is the point on the axis (x, 0, 0) to (x, y, z),
+			// which is (0, y, z) before normalization
 			vertices[vertex_index] = x;  // this is x
-			colors[vertex_index] = 1; vertex_index ++;  //R is this value
+			colors[vertex_index] = 1;    //R is this value
 			normals[vertex_index] = 0; // this is x
-
+			vertex_index++;
 			vertices[vertex_index] = y; // this is y
-			colors[vertex_index] = 0; vertex_index ++; // G is this value
-			normals[vertex_index] = y * depth * depth; // this is y
+			colors[vertex_index] = 0;  // G is this value
+			normals[vertex_index] = y * textureDepth * textureDepth; // this is y
+			vertex_index++;
+			vertices[vertex_index] = z; // this is z
+			colors[vertex_index] = 0; // B is this value
+			normals[vertex_index] = z * textureDepth * textureDepth / 4; // this is z
+			vertex_index++;
 
-			vertices[vertex_index] = z; //z. 
-			colors[vertex_index] = 0; vertex_index ++; // B is this value
-			normals[vertex_index] = z * edge * edge / 4; // this is z
-
-			texcoors[tex_index] =  (x + edge / 2) / normalizer; tex_index ++;//u coordinate
-			texcoors[tex_index] =  total_distance / normalizer; tex_index ++;//v coordinate
+			texcoors[tex_index] = (x + edge / 2) / normalizer; tex_index++;//u coordinate
+			texcoors[tex_index] = total_distance / normalizer; tex_index++;//v coordinate
 
 			prev_side_point[0] = x;
 
@@ -654,39 +656,39 @@ void buildCylinder(double textureDepth, double dispDepth){
 				double h = edge / 2;
 				double l = -display_distance;
 				double denom = pow(a * h, 2) - 2 * a * l * pow(h, 2) + pow(b * dispDepth, 2) + pow(h * l, 2);
-				double projectedZ = 
-					(sqrt(pow(dispDepth*h*(a-l),2)*(denom - pow(b*l,2))) + pow(b*dispDepth,2)*l) / denom;
+				double projectedZ =
+					(sqrt(pow(dispDepth * h * (a - l), 2) * (denom - pow(b * l, 2))) + pow(b * dispDepth, 2) * l) / denom;
 				vertices_projected[vertex_index - 1] = projectedZ;
-				vertices_projected[vertex_index - 2] = ( b / (a - l) ) * (projectedZ - l);
+				vertices_projected[vertex_index - 2] = (b / (a - l)) * (projectedZ - l);
 				vertices_projected[vertex_index - 3] = x;
 			}
 
 		}
-		total_distance = total_distance + sqrt(pow(y-prev_side_point[1],2) + pow(z - prev_side_point[2],2));
+		total_distance = total_distance + sqrt(pow(y - prev_side_point[1], 2) + pow(z - prev_side_point[2], 2));
 		prev_side_point[1] = y; prev_side_point[2] = z;
 	}
 
 	// total nr of vertices is the index counter for vertices divided by 3
-	nr_vertices = vertex_index/3;
-	
+	nr_vertices = vertex_index / 3;
+
 	// having created the meshgrid above, I need to create the associated indices of vertex lcations
 	// in the 'vertices' array for drawing.reminder that nr_points is the steps in the y column
 	// Modified from Evan's code:
 	iFace = 0; // this should end up being 3*numFaces
-	for(int vi=0; vi<(nr_vertices-nr_vertices_per_row); vi++){
-		if( (vi % nr_vertices_per_row) != (nr_vertices_per_row-1)){
+	for (int vi = 0; vi < (nr_vertices - nr_vertices_per_row); vi++) {
+		if ((vi % nr_vertices_per_row) != (nr_vertices_per_row - 1)) {
 			indices[iFace] = vi; iFace++;
-			indices[iFace] = vi+1; iFace++;
-			indices[iFace] = vi+nr_vertices_per_row; iFace++;
+			indices[iFace] = vi + 1; iFace++;
+			indices[iFace] = vi + nr_vertices_per_row; iFace++;
 
-			indices[iFace] = vi+1; iFace++;
-			indices[iFace] = vi+nr_vertices_per_row+1; iFace++;
-			indices[iFace] = vi+nr_vertices_per_row; iFace++;
+			indices[iFace] = vi + 1; iFace++;
+			indices[iFace] = vi + nr_vertices_per_row + 1; iFace++;
+			indices[iFace] = vi + nr_vertices_per_row; iFace++;
 		}
 	}
-	nr_triangles = (iFace)/3; // nr of triangles is the iFace counter divided by 3
+	nr_triangles = (iFace) / 3; // nr of triangles is the iFace counter divided by 3
 	cout << "FINISHED!" << endl;
-	
+
 }
 
 
@@ -706,12 +708,10 @@ void drawProbe(double probe_depth){
 	glLoadIdentity();
 	glColor3f(1.0f, 0.0f, 0.0f);
 	glLineWidth(4.f);
-	if(rotation_bool == 0){
-		glTranslated(probe_x_offset, 0, display_distance); 
-	}else{
+
 		glTranslated(0, -probe_y_offset, display_distance); 
 		glRotatef(-90.0, 0.0, 0.0 ,1.0); 
-	}
+	
 	
 	for (double x = probe_edge/2.; x >= -probe_edge/2. ; x = x - step_size) {
 				
@@ -735,29 +735,23 @@ void drawProbe(double probe_depth){
 
 void drawCylinder() {
 
-
-	glLoadIdentity();
-	glTranslated(0, 0, display_distance - depth_disp);
-	if(rotation_bool == 0){
-	glRotatef(90.0, 0.0, 0.0 ,1.0); // 0, 0, 1
-	}
 	//glEnable(GL_LIGHT1);
 	//glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
 
 	glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);
 	glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);
-	glLightfv(GL_LIGHT1, GL_SPECULAR, LightSpecular);
+	//glLightfv(GL_LIGHT1, GL_SPECULAR, LightSpecular);
 	glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 0.5f);
 	glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
 	//glTranslated(0, 0, display_distance - depth);
 
 
 
-	glMaterialfv(GL_FRONT, GL_SPECULAR, specularMaterial);
-	glMaterialf(GL_FRONT, GL_SHININESS, shininessMaterial);
-	glMaterialfv(GL_BACK, GL_SPECULAR, specularMaterial);
-	glMaterialf(GL_BACK, GL_SHININESS, shininessMaterial);
-	glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
+	//glMaterialfv(GL_FRONT, GL_SPECULAR, specularMaterial);
+	//glMaterialf(GL_FRONT, GL_SHININESS, shininessMaterial);
+	//glMaterialfv(GL_BACK, GL_SPECULAR, specularMaterial);
+	//glMaterialf(GL_BACK, GL_SHININESS, shininessMaterial);
+	//glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
 
 	// enable matrices for use in drawing below
 	glEnable(GL_LIGHTING);
@@ -768,6 +762,11 @@ void drawCylinder() {
 	glEnable(GL_NORMALIZE); //so we don't need to normalize our normal for surfaces
 	//glColorPointer(3, GL_FLOAT, 0, colors);
 	// glColor3f(1.0f, 0.0f, 0.0f);
+
+
+	glLoadIdentity();
+	glTranslated(0, 0, display_distance - depth_disp);
+
 
 	// bind the texture
 	if (texture_type == 0) {
@@ -785,6 +784,8 @@ void drawCylinder() {
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+
 
 	// activate and specify pointer to vertex array
 	glEnableClientState(GL_VERTEX_ARRAY);
@@ -823,13 +824,23 @@ void initTrial()
 	// get the trial parameters for this trial and re-define sine wave parameters dependant on display distance
 	initProjectionScreen(display_distance);
 
+	//texture_type = trial.getCurrent()["textureTypes"]; // texture type from the subject parameters file
+		bin = ceil( double(trialNumber) / double(num_depth) );
 
-	// define trial-specific variables for the 3d sine wave
-	//depth = trial.getCurrent()["testDepths"]; // take the depth from the subject parameters file
-	texture_type = trial.getCurrent()["textureTypes"]; // texture type from the subject parameters file
+		//if(bin <= 5 || bin > 15){
+		if(bin <= 5 || bin > 15){
+			texture_type = 3;
+			LightAmbient[0] = 0.5;
+			LightDiffuse[0] = 0.0;
+		}else{
+			texture_type = 0;
+			LightAmbient[0] = 0.30;
+			LightDiffuse[0] = 0.50;
+		}
+
 	depth_disp = trial.getCurrent()["testDepths"];
 	depth_text = depth_disp;
-	rotation_bool = trial.getCurrent()["orientation"];
+
 	// recalculate the edge size based on this tial's parameters
 
 	// here, make the sine wave a bit bigger so that the edges are totally hiddne by the viewing aperture
@@ -844,9 +855,6 @@ void initTrial()
 	}
 	normalizer = normalizer_base * normalizer_scalefactor; // maximum distance along the sine wave edge
 
-	// randomly assign whether to rotate (1) or not (0)
-	//rotation_bool = rand() % 2;
-	//rotation_bool = 1;
 
 	// preplan the vertices (in a vector) and an array of colors and give to OpenGL
 	buildCylinder(depth_text, depth_disp);
@@ -867,6 +875,7 @@ void advanceTrial()
 	parameters.find("SubjectName") << "\t" <<		//subjName
 	interoculardistance << "\t" <<
 	trialNumber << "\t" <<
+	bin << "\t" <<
 	texture_type << "\t" <<
 	texnum << "\t" <<
 	display_distance << "\t" <<
@@ -874,9 +883,12 @@ void advanceTrial()
 	twoD_starting_depth << "\t" <<
 	depth_disp << "\t" <<
 	depth_text << "\t" <<
-	estimated_depth << "\t" << 
-	trialTime << "\t" <<
-	rotation_bool << endl;	//trialN
+	LightAmbient[0] << "\t" << 
+	LightDiffuse[0] << "\t" << 
+	lightPos_Y << "\t" << 
+	lightPos_Z << "\t" << 
+	trialTime << endl;	//trialN
+	
 
 	finished = trial.isEmpty();
 	trialNumber++;
@@ -898,79 +910,76 @@ void handleKeypress(unsigned char key, int x, int y)
 	//cout << "listening for keypress" << endl;
 	switch (key)
     {   
-		case 'i':
-			visibleInfo=!visibleInfo;
-		break;
-		case 'T':
-		case 't':
-            depth_text = depth_text + 2;
-			buildCylinder(depth_text, depth_disp);
-			drawCylinder();
-			//initTrial();
+	case 'k':
+	case 'K':
+		{ 
+			depth = depth + 5;
+			buildCylinder(depth, depth);
 
+		}
 		break;
-		case 'r':
+
+	case 'l':
+	case 'L':
+		{  
+			depth = depth - 5;
+			buildCylinder(depth, depth);
+		}
+		break;
+
+
+
+
+	case 'd':
+	case 'D':
 		{
-            depth_text = depth_text - 2;
-			buildCylinder(depth_text, depth_disp);
-			drawCylinder();
-			//initTrial();
+		if(diffuseRed <= 1.0){  
+			diffuseRed = diffuseRed + 0.05;		
+			LightDiffuse[0] = diffuseRed;
+			}
+		}
+		break;
+
+	case 's':
+	case 'S':
+		{ 
+		if(diffuseRed >= 0){ 
+			diffuseRed = diffuseRed - 0.05;		
+			LightDiffuse[0] = diffuseRed;
+			}
+		}
+		break;
+
+	case 'o':
+	case 'O':
+		{  
+		lightPos_Y = lightPos_Y - 10;
+		LightPosition[1] = lightPos_Y;
 			
 		}
 		break;
-		case 'd':
-		{
-			depth_disp = depth_disp + 2 ;
-			buildCylinder(depth_text, depth_disp);
-			drawCylinder();
-			drawAperture();
-			//initTrial();
+
+	case 'p':
+	case 'P':
+		{  
+		lightPos_Y = lightPos_Y + 10;
+		LightPosition[1] = lightPos_Y;
 		}
 		break;
-		case 'c':
-		{
-			depth_disp = depth_disp - 2 ;
-			buildCylinder(depth_text, depth_disp);
-			drawCylinder();
-			//initTrial();
+
+	case 'm':
+	case 'M':
+		{  
+		lightPos_Z = lightPos_Z + 10;
+		LightPosition[2] = lightPos_Z;
 		}
 		break;
-		case 'm':
-		{
-			depth_disp = depth_disp + 2 ;
-			depth_text = depth_text + 2 ;
-			buildCylinder(depth_text, depth_disp);
-			drawCylinder();
-			drawAperture();
-			//initTrial();
-		}
-		break;
-		case 'o':
-		{
-			normalizer_base = normalizer_base + 5 ;
-			initTrial();
-			buildCylinder(depth_text, depth_disp);
-			drawCylinder();
-			drawAperture();
-		}
-		break;
-		case 'p':
-		{
-			normalizer_base = normalizer_base - 5 ;
-			initTrial();
-			buildCylinder(depth_text, depth_disp);
-			drawCylinder();
-			drawAperture();
-		}
-		break;
-		case 'n':
-		{
-			depth_disp = depth_disp - 2 ;
-			depth_text = depth_text - 2 ;
-			buildCylinder(depth_text, depth_disp);
-			drawCylinder();
-			drawAperture();
-			//initTrial();
+
+	case 'n':
+	case 'N':
+		{  
+		lightPos_Z = lightPos_Z - 10;
+		LightPosition[2] = lightPos_Z;
 		}
 		break;
 		case 'Q':
@@ -982,11 +991,7 @@ void handleKeypress(unsigned char key, int x, int y)
 			shutdown();
 		}
 		break;
-		case 'y':
-		{
-			initTrial();
-		}
-		break;
+
 
 		case 'f':
 		case 'F':
@@ -1051,42 +1056,31 @@ void handleKeypress(unsigned char key, int x, int y)
 		}
 		break;
 
-		case 'z': // change texture
+		case 'r':
 		{
-			/*
-			if (texture_type == 0) {
-				texture_type = 1;
-			} else if (texture_type == 1){
-				texture_type = 2;
-			}  else if (texture_type == 2){
-				texture_type = 3;
-			} else if (texture_type == 3){
-				texture_type = 0;
-			}
-			*/
-			if (texture_type == 0) {
-				texture_type = 3;
-			} else {
-				texture_type = 0;
-			}
+			normalizer_base = normalizer_base + 5 ;
+			initTrial();
+			buildCylinder(depth_text, depth_disp);
+			drawCylinder();
+			drawAperture();
 		}
 		break;
+		case 'e':
+		{
+			normalizer_base = normalizer_base - 5 ;
+			initTrial();
+			buildCylinder(depth_text, depth_disp);
+			drawCylinder();
+			drawAperture();
+		}
+		break;
+
 		case 'a':
 		{
         apertureState++;
 		apertureState = apertureState % 3;
 		}
-		//case '4':
-		//{
 
-		//	//if (estimated_depth < 2) {
-		//	//	texnum = 51; // decease the depth by 1/10th of a millimeter
-		//	//} else {
-		//	//	texnum = 2;
-		//	//}
-		//	//cout << "Depth increased to : " << estimated_depth << endl;
-		//break;
-		//}
 		case '+': // advance to next trial
 		{
 			if (trialTime > drawStimulusTime){
@@ -1094,6 +1088,10 @@ void handleKeypress(unsigned char key, int x, int y)
 			}
 			
 		}
+		break;
+
+		case 'i':
+		checkInfo = !checkInfo;
 		break;
 		
 	}
